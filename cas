@@ -1,0 +1,68 @@
+const Web3 = require('web3');
+const web3 = new Web3(new Web3.providers.HttpProvider('https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID'));
+
+// Replace with the contract address of the VotingDAO contract
+const contractAddress = '0xYourContractAddressHere';
+const contractABI = [
+    // The ABI of the contract (simplified version, include only relevant methods)
+    {
+        "constant": true,
+        "inputs": [{"name": "account", "type": "address"}],
+        "name": "getVotes",
+        "outputs": [{"name": "", "type": "uint256"}],
+        "payable": false,
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [{"name": "to", "type": "address"}],
+        "name": "delegate",
+        "outputs": [],
+        "payable": false,
+        "stateMutability": "nonpayable",
+        "type": "function"
+    }
+];
+
+// Create a contract instance
+const contract = new web3.eth.Contract(contractABI, contractAddress);
+
+// Replace with the user's private key and address
+const userAddress = '0xYourAddressHere';
+const userPrivateKey = '0xYourPrivateKeyHere'; // Never expose this key publicly!
+
+const toDelegateAddress = '0xAddressToDelegateTo'; // Address to delegate votes to
+
+async function delegateVotes() {
+    // Create the transaction data
+    const data = contract.methods.delegate(toDelegateAddress).encodeABI();
+
+    // Get the current gas price
+    const gasPrice = await web3.eth.getGasPrice();
+
+    // Get the current nonce for the transaction
+    const nonce = await web3.eth.getTransactionCount(userAddress, 'latest');
+
+    // Estimate the gas limit for the transaction
+    const gasLimit = await contract.methods.delegate(toDelegateAddress).estimateGas({ from: userAddress });
+
+    // Create the transaction object
+    const tx = {
+        from: userAddress,
+        to: contractAddress,
+        gas: gasLimit,
+        gasPrice: gasPrice,
+        data: data,
+        nonce: nonce
+    };
+
+    // Sign the transaction
+    const signedTx = await web3.eth.accounts.signTransaction(tx, userPrivateKey);
+
+    // Send the signed transaction
+    web3.eth.sendSignedTransaction(signedTx.rawTransaction)
+        .on('receipt', console.log)
+        .on('error', console.error);
+}
+
+delegateVotes().catch(console.error);
